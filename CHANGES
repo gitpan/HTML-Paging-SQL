@@ -8,3 +8,6 @@ Revision history for Perl extension HTML::Paging::SQL.
 
 1.12	2002-02-12 22:18
 		- add a new method
+
+1.13	2002-03-11 21:32
+		- fix a default page number

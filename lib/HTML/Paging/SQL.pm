@@ -14,8 +14,8 @@ package HTML::Paging::SQL;
 #
 sub BEGIN {
 	# set version to ENV
-	$HTML::Paging::SQL::revision = '$Id: SQL.pm,v 1.12 2002/02/12 14:19:31 wangaocheng Exp $';
-	($HTML::Paging::SQL::VERSION) = '$Revision: 1.12 $' =~ /(\d+\.\d+)/;
+	$HTML::Paging::SQL::revision = '$Id: SQL.pm,v 1.13 2002/03/11 21:28:27 wac Exp $';
+	($HTML::Paging::SQL::VERSION) = '$Revision: 1.13 $' =~ /(\d+\.\d+)/;
 	$ENV{"HTML_PAGING_SQL"} = $HTML::Paging::SQL::VERSION;
 	if ($ENV{"REQUEST_METHOD"} eq "POST") {
 		sysread(STDIN, $HTML::Paging::SQL::buffer, $ENV{"CONTENT_LENGTH"});
@@ -56,6 +56,7 @@ sub number {
 	$result[1] = $self->{"num"} * ($hash->{"HP_C"}-1);
 	$result[2] = $self->{"num"};
 	if ($self->{"all"} < $self->{"num"}) {
+		$result[0] = qq|1|;
 		return @result; # output null to caller
 	}
 	my $param = {};

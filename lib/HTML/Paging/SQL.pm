@@ -14,8 +14,8 @@ package HTML::Paging::SQL;
 #
 sub BEGIN {
 	# set version to ENV
-	$HTML::Paging::SQL::revision = '$Id: SQL.pm,v 1.17 2002/01/18 12:37:57 wangaocheng Exp $';
-	($HTML::Paging::SQL::VERSION) = '$Revision: 1.17 $' =~ /(\d+\.\d+)/;
+	$HTML::Paging::SQL::revision = '$Id: SQL.pm,v 1.12 2002/02/12 14:19:31 wangaocheng Exp $';
+	($HTML::Paging::SQL::VERSION) = '$Revision: 1.12 $' =~ /(\d+\.\d+)/;
 	$ENV{"HTML_PAGING_SQL"} = $HTML::Paging::SQL::VERSION;
 	if ($ENV{"REQUEST_METHOD"} eq "POST") {
 		sysread(STDIN, $HTML::Paging::SQL::buffer, $ENV{"CONTENT_LENGTH"});
@@ -137,6 +137,90 @@ sub number {
 }
 
 #
+# Format output with Single Mode
+#
+sub single {
+	my $self = shift;
+	my $hash = $self->_status();
+	my @result;
+	$result[1] = $self->{"num"} * ($hash->{"HP_C"}-1);
+	$result[2] = $self->{"num"};
+	if ($self->{"all"} < $self->{"num"}) {
+		return @result; # output null to caller
+	}
+	my $param = {};
+	# process user parameter
+	if (ref($_[0]) eq "HASH") {
+		$param = shift;
+	} else {
+		my %param = @_;
+		$param = \%param;
+	}
+	# set default tag
+	$param->{"first"} = "First" if (!$param->{"first"});
+	$param->{"previous"} = "Previous" if (!$param->{"previous"});
+	$param->{"next"} = "Next" if (!$param->{"next"});
+	$param->{"last"} = "Last" if (!$param->{"last"});
+	$param->{"split"} = " | " if (!$param->{"split"});
+	# return HTML code
+	undef $result[0];
+	$result[0] .= "<!-- HTML::Paging::SQL $HTML::Paging::SQL::VERSION Begin -->\n";
+	# set first page
+	if ($hash->{"HP_C"} <= 1) {
+		$result[0] .= qq|$param->{"first"}\n|;
+	} else {
+		$result[0] .= qq|<a href="$hash->{'HP_U'}?|;
+		$result[0] .= qq|$hash->{'HP_P'}&| if ($hash->{'HP_P'});
+		$result[0] .= qq|HP_C=1"|;
+		$result[0] .= qq| target="$param->{'target'}"| if ($param->{"target"});
+		$result[0] .= qq|>|;
+		$result[0] .= qq|$param->{"first"}|;
+		$result[0] .= qq|</a>\n|;
+	}
+	$result[0] .= qq|$param->{"split"}\n|;
+	# set previous page
+	if ($hash->{"HP_C"} <= 1) {
+		$result[0] .= qq|$param->{"previous"}\n|;
+	} else {
+		$result[0] .= qq|<a href="$hash->{'HP_U'}?|;
+		$result[0] .= qq|$hash->{'HP_P'}&| if ($hash->{'HP_P'});
+		$result[0] .= qq|HP_C=| . ($hash->{"HP_C"}-1) . qq|"|;
+		$result[0] .= qq| target="$param->{'target'}"| if ($param->{"target"});
+		$result[0] .= qq|>|;
+		$result[0] .= qq|$param->{"previous"}|;
+		$result[0] .= qq|</a>\n|;
+	}
+	$result[0] .= qq|$param->{"split"}\n|;
+	# set next page
+	if ($hash->{"HP_C"} >= $hash->{"HP_A"}) {
+		$result[0] .= qq|$param->{"next"}\n|;
+	} else {
+		$result[0] .= qq|<a href="$hash->{'HP_U'}?|;
+		$result[0] .= qq|$hash->{'HP_P'}&| if ($hash->{'HP_P'});
+		$result[0] .= qq|HP_C=| . ($hash->{"HP_C"}+1) . qq|"|;
+		$result[0] .= qq| target="$param->{'target'}"| if ($param->{"target"});
+		$result[0] .= qq|>|;
+		$result[0] .= qq|$param->{"next"}|;
+		$result[0] .= qq|</a>\n|;
+	}
+	$result[0] .= qq|$param->{"split"}\n|;
+	# set last page
+	if ($hash->{"HP_C"} >= $hash->{"HP_A"}) {
+		$result[0] .= qq|$param->{"last"}\n|;
+	} else {
+		$result[0] .= qq|<a href="$hash->{'HP_U'}?|;
+		$result[0] .= qq|$hash->{'HP_P'}&| if ($hash->{'HP_P'});
+		$result[0] .= qq|HP_C=$hash->{'HP_A'}"|;
+		$result[0] .= qq| target="$param->{'target'}"| if ($param->{"target"});
+		$result[0] .= qq|>|;
+		$result[0] .= qq|$param->{"last"}|;
+		$result[0] .= qq|</a>\n|;
+	}
+	$result[0] .= "<!-- HTML::Paging::SQL $HTML::Paging::SQL::VERSION End -->\n";
+	return @result;
+}
+
+#
 # Get current status { private method }
 #
 sub _status {
@@ -212,6 +296,15 @@ I think you can use this class in all platforms :)
 		target => setting target for display window,
 	);
 
+	my ($html,$start,$length) = $hp->single(
+		first => set first page tag,
+		previous => set previous page tag,
+		next => set next page tag,
+		last => set last page tag,
+		split => set split tag,
+		target => setting target for display window,
+	);
+
 =head1 DESCRIPTION
 
 If you use the SQL database, this class can help you divide the page, support th
@@ -222,14 +315,14 @@ icons jumping forwards or backwards.
 
 =head1 HOW TO USE METHOD
 
-=over 2
+=over 3
 
 =item HTML::Paging::SQL->new(all => ?, num => ?)
 
-For example,according to this way to initialize the class, you should at least d
-eliver a parameter named "all",which is the total amount of the data you want to 
-show. They each express a subsection of the pagination number on each page.If you
-do not deliver, num is the default for 10, which means each page will show 10 data. 
+For example,according to this way to initialize the class, you should at least deliver
+a parameter named "all",which is the total amount of the data you want to show. They 
+each express a subsection of the pagination number on each page.If you do not deliver,
+num is the default for 10, which means each page will show 10 data. 
 
 =item $hp->number(sub => ?, ficon => ?, bicon => ?, target => ?)
 
@@ -245,8 +338,15 @@ system will adopt "<<"AND">>" for tacit jump icons. After executing this method
 successfully, it will rebound 3 parameters;the 1st stands for the HTML code of page
 number,the 2nd for the limit first parameter in SQL,the 3rd for the limit second 
 parameter in SQL.If the 2 nd and 3rd names stand for $start and $length, you can 
-use it: "select* from table limit $start,$length".  
+use it: "select * from table limit $start,$length". 
 
+=item $hp->single(first=>?, previous=>?, next=>?, last=>?, split=>?, target=>?)
+
+This method is adopted as a format html code with the pagination mode of a single 
+jump. All the options can be chosen. You can establish the four choices---first, 
+previous, next and last---to specify the linking used language when the html code
+is exported; split is a division sign to set up the link of each jump; target can
+be specified for the linking target window of a pagination jump.
 
 =back
 
